@@ -8,13 +8,13 @@ describe("Login", () => {
   
     it("should login user", () => {
       cy.get('[name="email"]').type('test@test.com');
-      cy.get('[name="password').type('password1');
+      cy.get('[name="password"]').type('password1');
       cy.get('.btn-success').click();  
       cy.url().should('include', '/customers');
     });
 
     it("should show errors with invalid email or password", () => {
-        const emailSelector = '[name="email';
+        const emailSelector = '[name="email"]';
         const passwordSelector = '[name="password"]';
         cy.get(emailSelector).type('test');
         cy.get(emailSelector).blur();

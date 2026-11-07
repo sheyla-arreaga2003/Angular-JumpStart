@@ -1,0 +1,62 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-analyze:
+    name: Build, tests and SonarQube analysis
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js for Angular 14
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build Angular application
+        run: npm run build
+
+      - name: Run Cypress end-to-end tests
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm start
+          wait-on: http://localhost:8080
+          wait-on-timeout: 90
+          browser: electron
+        env:
+          WEBSITE_RESOURCE_GROUP: ci
+
+      - name: Upload Cypress evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-failure-evidence
+          path: |
+            cypress/screenshots
+            cypress/videos
+          if-no-files-found: ignore
+
+      - name: SonarQube Cloud analysis
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: SonarSource/sonarqube-scan-action@v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
