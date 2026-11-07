@@ -34,15 +34,20 @@ jobs:
         run: npm run build
 
       - name: Run Cypress end-to-end tests
-        uses: cypress-io/github-action@v6
-        with:
-          install: false
-          start: npm start
-          wait-on: http://localhost:8080
-          wait-on-timeout: 90
-          browser: electron
         env:
           WEBSITE_RESOURCE_GROUP: ci
+        run: |
+          npm start > /tmp/angular-jumpstart.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          for attempt in {1..45}; do
+            if curl --fail --silent http://localhost:8080 > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://localhost:8080 > /dev/null
+          npx cypress run --browser electron
 
       - name: Upload Cypress evidence on failure
         if: failure()
@@ -55,7 +60,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: SonarQube Cloud analysis
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: >-
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository
         uses: SonarSource/sonarqube-scan-action@v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

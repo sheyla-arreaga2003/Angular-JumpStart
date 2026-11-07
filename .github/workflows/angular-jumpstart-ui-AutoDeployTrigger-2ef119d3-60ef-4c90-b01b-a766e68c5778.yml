@@ -1,17 +1,9 @@
 name: Trigger auto deployment for angular-jumpstart-ui
 
 # When this action will be executed
+# Deployment requires separate Azure credentials; run it manually.
 on:
-  push:
-    branches:
-    - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-    - main
-
-  # Allow mannually trigger 
-  workflow_dispatch:      
+  workflow_dispatch:
 
 jobs:
   build:
@@ -43,7 +35,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    
+
     steps:
       - name: Azure Login
         uses: azure/login@v1
